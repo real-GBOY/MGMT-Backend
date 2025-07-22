@@ -29,13 +29,11 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
-const cors = require("cors");
 const xssFilter = require("xss");
 const hpp = require("hpp");
 
 // Import security middleware
 const {
-	corsOptions,
 	globalLimiter,
 	authLimiter,
 	apiLimiter,
@@ -82,10 +80,7 @@ app.use(
 	})
 );
 
-// 4. CORS configuration
-app.use(cors(corsOptions));
-
-// 5. Data sanitization against NoSQL query injection
+// 4. Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
 // 6. XSS protection
@@ -198,7 +193,6 @@ app.get("/", (req, res) => {
 				"Input Validation",
 				"XSS Protection",
 				"SQL Injection Prevention",
-				"CORS Protection",
 				"Security Headers",
 				"File Upload Security",
 				"Request Size Limiting",

@@ -8,12 +8,6 @@ const { generateTokenPair, refreshAccessToken } = require("../utils/jwt");
 
 exports.register = async (req, res) => {
 	try {
-		console.log("=== Controller Debug ===");
-		console.log("Request body:", req.body);
-		console.log("Request file:", req.file);
-		console.log("Request files:", req.files);
-		console.log("========================");
-
 		const {
 			firstName,
 			lastName,
@@ -26,219 +20,54 @@ exports.register = async (req, res) => {
 			role,
 		} = req.body;
 
-		// Input validation
-		if (
-			!firstName ||
-			!lastName ||
-			!nationalID ||
-			!email ||
-			!password ||
-			!phoneNumber ||
-			!role
-		) {
-			return res.status(400).json({
-				status: "fail",
-				message:
-					"Required fields: firstName, lastName, nationalID, email, password, phoneNumber, role",
-			});
-		}
-
-		// Validate role
-		const validRoles = ["admin", "team_leader", "vice_head", "member"];
-		if (!validRoles.includes(role)) {
-			return res.status(400).json({
-				status: "fail",
-				message: "Role must be one of: admin, team_leader, vice_head, member",
-			});
-		}
-
-		// Profile picture is optional for testing
-		if (!req.file) {
-			console.log("No profile picture provided, using default");
-		}
-
-		// Check if user already exists
-		const existingUser = await User.findOne({ email });
-		if (existingUser) {
-			return res.status(400).json({
-				status: "fail",
-				message: "User with this email already exists",
-			});
-		}
-
-		// Upload image to Cloudinary if provided
-		let cloudinaryResult = null;
-		if (req.file) {
-			const uploadPromise = new Promise((resolve, reject) => {
-				const uploadStream = cloudinary.uploader.upload_stream(
-					{
-						folder: "profiles",
-						resource_type: "image",
-						transformation: [{ width: 300, height: 300, crop: "fill" }],
-					},
-					(error, result) => {
-						if (error) {
-							reject(error);
-						} else {
-							resolve(result);
-						}
-					}
-				);
-
-				// Pipe the buffer to the upload stream
-				uploadStream.end(req.file.buffer);
-			});
-
-			cloudinaryResult = await uploadPromise;
-		}
-
-		// Hash the password
-		const hashedPassword = await bcrypt.hash(password, 12);
-
-		// Create user
+		// Create user directly, no validation or hashing
 		const userData = {
 			firstName,
 			lastName,
 			nationalID,
 			email,
-			password: hashedPassword,
+			password,
 			phoneNumber,
 			role,
 		};
-
-		// Add optional fields if provided
-		if (dateOfBirth) {
-			userData.dateOfBirth = new Date(dateOfBirth);
-		}
-		if (team) {
-			userData.team = team;
-		}
-		if (cloudinaryResult) {
-			userData.profilePicture = cloudinaryResult.secure_url;
-		} else {
-			// Set a default profile picture URL
-			userData.profilePicture =
-				"https://res.cloudinary.com/your-cloud-name/image/upload/v1/profiles/default-avatar.png";
-		}
+		if (dateOfBirth) userData.dateOfBirth = dateOfBirth;
+		if (team) userData.team = team;
+		userData.profilePicture =
+			req.body.profilePicture ||
+			"https://res.cloudinary.com/your-cloud-name/image/upload/v1/profiles/default-avatar.png";
 
 		const newUser = await User.create(userData);
 
-		// Generate JWT tokens for the new user
-		const tokens = generateTokenPair(newUser._id, newUser.role, newUser.team);
-
-		// Set token in cookie (optional)
-		res.cookie("token", tokens.accessToken, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-		});
-
 		res.status(201).json({
 			status: "success",
-			message: "User registered successfully",
+			message: "User registered (no security)",
 			data: {
-				user: {
-					id: newUser._id,
-					firstName: newUser.firstName,
-					lastName: newUser.lastName,
-					email: newUser.email,
-					role: newUser.role,
-					profilePicture: newUser.profilePicture || null,
-				},
-				token: tokens.accessToken,
-				refreshToken: tokens.refreshToken,
+				user: newUser,
 			},
 		});
 	} catch (err) {
-		console.error("Registration error:", err);
-		console.error("Error stack:", err.stack);
-
-		// More specific error messages
-		if (err.name === "ValidationError") {
-			return res.status(400).json({
-				status: "fail",
-				message: "Validation error",
-				details: err.message,
-			});
-		}
-
-		if (err.name === "MongoError" && err.code === 11000) {
-			return res.status(400).json({
-				status: "fail",
-				message: "Duplicate field value",
-				details: "A user with this email or national ID already exists",
-			});
-		}
-
 		res.status(500).json({
 			status: "fail",
 			message: "Server error during registration",
-			details: process.env.NODE_ENV === "development" ? err.message : undefined,
 		});
 	}
 };
 
-// Login user
 exports.login = async (req, res) => {
 	try {
 		const { email, password } = req.body;
-
-		// Input validation
-		if (!email || !password) {
-			return res.status(400).json({
-				status: "fail",
-				message: "Email and password are required",
-			});
-		}
-
-		// Find user by email
-		const user = await User.findOne({ email }).select("+password");
+		const user = await User.findOne({ email, password });
 		if (!user) {
 			return res.status(401).json({
 				status: "fail",
-				message: "Invalid email or password",
+				message: "Invalid email or password (no security)",
 			});
 		}
-
-		// Check password
-		const isPasswordCorrect = await bcrypt.compare(password, user.password);
-		if (!isPasswordCorrect) {
-			return res.status(401).json({
-				status: "fail",
-				message: "Invalid email or password",
-			});
-		}
-
-		// Check if user is active
-		if (!user.isActive) {
-			return res.status(401).json({
-				status: "fail",
-				message: "Account is deactivated. Please contact administrator.",
-			});
-		}
-
-		// Generate JWT tokens
-		const tokens = generateTokenPair(user._id, user.role, user.team);
-
-		// Remove password from response
-		user.password = undefined;
-
-		// Set token in cookie (optional)
-		res.cookie("token", tokens.accessToken, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-		});
-
 		res.status(200).json({
 			status: "success",
-			data: {
-				user,
-				tokens,
-			},
+			data: { user },
 		});
 	} catch (err) {
-		console.error("Login error:", err);
 		res.status(500).json({
 			status: "fail",
 			message: "Server error during login",

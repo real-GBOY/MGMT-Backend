@@ -81,31 +81,6 @@ module.exports = {
 		validateFileContent: true,
 	},
 
-	// CORS Configuration
-	cors: {
-		allowedOrigins: process.env.ALLOWED_ORIGINS
-			? process.env.ALLOWED_ORIGINS.split(",")
-			: [
-					"http://localhost:3000",
-					"http://localhost:3001",
-					"https://yourdomain.com",
-					"https://www.yourdomain.com",
-			  ],
-		credentials: true,
-		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-		allowedHeaders: [
-			"Content-Type",
-			"Authorization",
-			"X-Requested-With",
-			"Accept",
-			"Origin",
-			"Cache-Control",
-			"X-File-Name",
-		],
-		exposedHeaders: ["Content-Range", "X-Content-Range"],
-		maxAge: 86400, // 24 hours
-	},
-
 	// Security Headers
 	headers: {
 		contentSecurityPolicy: {
