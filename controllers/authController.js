@@ -31,7 +31,28 @@ exports.register = async (req, res) => {
 			role,
 		};
 		if (dateOfBirth) userData.dateOfBirth = dateOfBirth;
-		if (team) userData.team = team;
+
+		// Handle team assignment - support both team name and team ID
+		if (team) {
+			// Check if team is a valid ObjectId (team ID)
+			const mongoose = require("mongoose");
+			if (mongoose.Types.ObjectId.isValid(team)) {
+				// It's a valid ObjectId, use it directly
+				userData.team = team;
+			} else {
+				// It's a team name, find the team by name
+				const teamDoc = await Team.findOne({ name: team });
+				if (teamDoc) {
+					userData.team = teamDoc._id;
+				} else {
+					return res.status(400).json({
+						status: "fail",
+						message: `Team "${team}" not found`,
+					});
+				}
+			}
+		}
+
 		userData.profilePicture =
 			req.body.profilePicture ||
 			"https://res.cloudinary.com/your-cloud-name/image/upload/v1/profiles/default-avatar.png";
@@ -44,12 +65,14 @@ exports.register = async (req, res) => {
 			data: {
 				user: newUser,
 			},
+			token: generateTokenPair(newUser._id),
 		});
 	} catch (err) {
 		res.status(500).json({
 			status: "fail",
 			message: "Server error during registration",
 		});
+		console.log(err);
 	}
 };
 
@@ -66,6 +89,7 @@ exports.login = async (req, res) => {
 		res.status(200).json({
 			status: "success",
 			data: { user },
+			token: generateTokenPair(user._id),
 		});
 	} catch (err) {
 		res.status(500).json({
@@ -263,6 +287,30 @@ exports.changePassword = async (req, res) => {
 		res.status(500).json({
 			status: "fail",
 			message: "Server error while changing password",
+		});
+	}
+};
+
+// Get all teams for registration form
+exports.getTeamsForRegistration = async (req, res) => {
+	try {
+		const teams = await Team.find().select("name description");
+
+		res.status(200).json({
+			status: "success",
+			data: {
+				teams: teams.map((team) => ({
+					id: team._id,
+					name: team.name,
+					description: team.description,
+				})),
+			},
+		});
+	} catch (err) {
+		console.error("Get teams for registration error:", err);
+		res.status(500).json({
+			status: "fail",
+			message: "Server error while fetching teams",
 		});
 	}
 };

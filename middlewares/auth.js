@@ -150,10 +150,11 @@ const teamLeaderOrAdmin = (req, res, next) => {
 		});
 	}
 
-	if (!["teamHead", "admin"].includes(req.user.role)) {
+	if (!["teamHead", "teamViceHead", "admin"].includes(req.user.role)) {
 		return res.status(403).json({
 			status: "fail",
-			message: "Access denied. Team head or admin privileges required",
+			message:
+				"Access denied. Team head, vice head, or admin privileges required",
 		});
 	}
 
@@ -262,8 +263,8 @@ const resourceOwnerOrTeamLeaderOrAdmin = (req, res, next) => {
 		return next();
 	}
 
-	// Team head can access team resources
-	if (req.user.role === "teamHead") {
+	// Team head or vice head can access team resources
+	if (["teamHead", "teamViceHead"].includes(req.user.role)) {
 		return next();
 	}
 
@@ -281,7 +282,7 @@ const resourceOwnerOrTeamLeaderOrAdmin = (req, res, next) => {
 	return res.status(403).json({
 		status: "fail",
 		message:
-			"Access denied. You can only access your own resources or team resources as team head",
+			"Access denied. You can only access your own resources or team resources as team head or vice head",
 	});
 };
 
@@ -391,39 +392,6 @@ const teamResourceAccess = (req, res, next) => {
 	next();
 };
 
-// Rate limiting middleware (basic implementation)
-const rateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
-	const requests = new Map();
-
-	return (req, res, next) => {
-		const clientId = req.ip || req.connection.remoteAddress;
-		const now = Date.now();
-		const windowStart = now - windowMs;
-
-		// Clean old requests
-		if (requests.has(clientId)) {
-			requests.set(
-				clientId,
-				requests.get(clientId).filter((timestamp) => timestamp > windowStart)
-			);
-		} else {
-			requests.set(clientId, []);
-		}
-
-		const clientRequests = requests.get(clientId);
-
-		if (clientRequests.length >= maxRequests) {
-			return res.status(429).json({
-				status: "fail",
-				message: "Too many requests. Please try again later.",
-			});
-		}
-
-		clientRequests.push(now);
-		next();
-	};
-};
-
 // Logout middleware (clear token)
 const logout = (req, res, next) => {
 	// Clear token from cookies if exists
@@ -484,7 +452,6 @@ module.exports = {
 	sameTeam,
 	ownerOrAdmin,
 	resourceOwnerOrTeamLeaderOrAdmin,
-	rateLimit,
 	logout,
 	validateToken,
 };

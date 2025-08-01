@@ -3,7 +3,7 @@
 const express = require("express");
 const multer = require("multer");
 const authController = require("../controllers/authController");
-const { authLimiter, fileUploadSecurity } = require("../middlewares/security");
+const { fileUploadSecurity } = require("../middlewares/security");
 
 const router = express.Router();
 
@@ -64,10 +64,12 @@ router.get("/test", (req, res) => {
 	});
 });
 
+// Get teams for registration form
+router.get("/teams", authController.getTeamsForRegistration);
+
 // Register route
 router.post(
 	"/register",
-	authLimiter,
 	upload.single("profilePicture"),
 	fileUploadSecurity,
 	handleMulterError,
@@ -76,7 +78,7 @@ router.post(
 );
 
 // Login route
-router.post("/login", authLimiter, authController.login);
+router.post("/login", authController.login);
 
 // Refresh token
 router.post("/refresh", authController.refreshToken);

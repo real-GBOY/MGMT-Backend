@@ -1,62 +1,10 @@
 /** @format */
 
-const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
 const xssFilter = require("xss");
 const hpp = require("hpp");
 const validator = require("validator");
-
-// Rate limiting configurations
-const createRateLimit = (windowMs, max, message) => {
-	return rateLimit({
-		windowMs,
-		max,
-		message: {
-			status: "fail",
-			message:
-				message || "Too many requests from this IP, please try again later.",
-		},
-		standardHeaders: true,
-		legacyHeaders: false,
-		handler: (req, res) => {
-			res.status(429).json({
-				status: "fail",
-				message:
-					message || "Too many requests from this IP, please try again later.",
-				retryAfter: Math.ceil(windowMs / 1000),
-			});
-		},
-	});
-};
-
-// Global rate limiter
-const globalLimiter = createRateLimit(
-	15 * 60 * 1000,
-	100,
-	"Too many requests from this IP"
-);
-
-// Auth rate limiter (more strict)
-const authLimiter = createRateLimit(
-	15 * 60 * 1000,
-	5,
-	"Too many authentication attempts"
-);
-
-// API rate limiter
-const apiLimiter = createRateLimit(
-	15 * 60 * 1000,
-	1000,
-	"API rate limit exceeded"
-);
-
-// File upload rate limiter
-const uploadLimiter = createRateLimit(
-	60 * 60 * 1000,
-	10,
-	"Too many file uploads"
-);
 
 // Input validation middleware
 const validateInput = (req, res, next) => {
@@ -294,10 +242,6 @@ const environmentCheck = (req, res, next) => {
 
 // Export all security middleware
 module.exports = {
-	globalLimiter,
-	authLimiter,
-	apiLimiter,
-	uploadLimiter,
 	validateInput,
 	preventSQLInjection,
 	fileUploadSecurity,

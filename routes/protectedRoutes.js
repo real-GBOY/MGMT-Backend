@@ -15,7 +15,6 @@ const {
 	sameTeam,
 	ownerOrAdmin,
 	resourceOwnerOrTeamLeaderOrAdmin,
-	rateLimit,
 } = require("../middlewares/auth");
 
 const router = express.Router();
@@ -79,18 +78,17 @@ router.get(
 	}
 );
 
-// Example: Route with rate limiting
-router.get("/rate-limited", rateLimit(10, 60 * 1000), (req, res) => {
+// Example: Route without rate limiting
+router.get("/no-rate-limit", (req, res) => {
 	res.json({
 		status: "success",
-		message: "Rate limited route (10 requests per minute)",
+		message: "No rate limit route",
 	});
 });
 
 // Example: Route with multiple middleware
 router.get(
 	"/complex",
-	rateLimit(5, 60 * 1000), // 5 requests per minute
 	authenticate, // Must be authenticated
 	teamLeaderOrAdmin, // Must be team leader or admin
 	(req, res) => {

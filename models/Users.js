@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema(
 		},
 		team: {
 			type: mongoose.Schema.Types.ObjectId,
+			
 			ref: "Team",
 		},
 		role: {

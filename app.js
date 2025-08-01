@@ -34,10 +34,6 @@ const hpp = require("hpp");
 
 // Import security middleware
 const {
-	globalLimiter,
-	authLimiter,
-	apiLimiter,
-	uploadLimiter,
 	validateInput,
 	preventSQLInjection,
 	fileUploadSecurity,
@@ -134,9 +130,6 @@ app.use(sessionSecurity);
 // 14. Security logging
 app.use(securityLogging);
 
-// 15. Global rate limiting
-app.use(globalLimiter);
-
 // ===== BASIC MIDDLEWARE =====
 
 // 16. Request logging
@@ -189,7 +182,6 @@ app.get("/", (req, res) => {
 			features: [
 				"JWT Authentication",
 				"Role-Based Access Control",
-				"Rate Limiting",
 				"Input Validation",
 				"XSS Protection",
 				"SQL Injection Prevention",

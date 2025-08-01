@@ -24,26 +24,6 @@ module.exports = {
 		bcryptRounds: 12,
 	},
 
-	// Rate Limiting Configuration
-	rateLimit: {
-		global: {
-			windowMs: 15 * 60 * 1000, // 15 minutes
-			max: 100, // limit each IP to 100 requests per windowMs
-		},
-		auth: {
-			windowMs: 15 * 60 * 1000, // 15 minutes
-			max: 5, // limit each IP to 5 auth requests per windowMs
-		},
-		api: {
-			windowMs: 15 * 60 * 1000, // 15 minutes
-			max: 1000, // limit each IP to 1000 API requests per windowMs
-		},
-		upload: {
-			windowMs: 60 * 60 * 1000, // 1 hour
-			max: 10, // limit each IP to 10 uploads per hour
-		},
-	},
-
 	// File Upload Security
 	fileUpload: {
 		maxFileSize: 10 * 1024 * 1024, // 10MB
@@ -193,13 +173,11 @@ module.exports = {
 		development: {
 			enableDebugMode: true,
 			showErrorDetails: true,
-			disableRateLimiting: false,
 			enableHotReload: true,
 		},
 		production: {
 			enableDebugMode: false,
 			showErrorDetails: false,
-			disableRateLimiting: false,
 			enableHotReload: false,
 			enableCompression: true,
 			enableCaching: true,
@@ -208,7 +186,6 @@ module.exports = {
 		test: {
 			enableDebugMode: true,
 			showErrorDetails: true,
-			disableRateLimiting: true,
 			enableHotReload: false,
 		},
 	},
