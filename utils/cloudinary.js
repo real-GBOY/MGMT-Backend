@@ -18,7 +18,7 @@ if (
 	!process.env.CLOUDINARY_API_KEY ||
 	!process.env.CLOUDINARY_API_SECRET
 ) {
-	console.warn("⚠️ Using fallback Cloudinary configuration");
+
 	console.log("Cloudinary config:", {
 		cloud_name: cloudinaryConfig.cloud_name,
 		api_key: cloudinaryConfig.api_key,

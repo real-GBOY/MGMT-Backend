@@ -53,7 +53,7 @@ const userSchema = new mongoose.Schema(
 		},
 		team: {
 			type: mongoose.Schema.Types.ObjectId,
-			
+
 			ref: "Team",
 		},
 		role: {
@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema(
 		profilePicture: {
 			type: String,
 			default:
-				"https://res.cloudinary.com/your-cloud-name/image/upload/v1/profiles/default-avatar.png",
+				"https://ui-avatars.com/api/?name=User&background=random&color=fff&size=200",
 		},
 		isActive: {
 			type: Boolean,

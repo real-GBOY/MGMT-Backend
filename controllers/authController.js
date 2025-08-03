@@ -1,6 +1,7 @@
 /** @format */
 
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const cloudinary = require("../utils/cloudinary");
 const User = require("../models/Users");
 const Team = require("../models/Team");
@@ -20,27 +21,42 @@ exports.register = async (req, res) => {
 			role,
 		} = req.body;
 
-		// Create user directly, no validation or hashing
+		// Check if user already exists
+		const existingUser = await User.findOne({
+			$or: [{ email }, { nationalID }],
+		});
+
+		if (existingUser) {
+			return res.status(400).json({
+				status: "fail",
+				message:
+					existingUser.email === email
+						? "Email already registered"
+						: "National ID already registered",
+			});
+		}
+
+		// Hash password
+		const hashedPassword = await bcrypt.hash(password, 12);
+
+		// Prepare user data
 		const userData = {
 			firstName,
 			lastName,
 			nationalID,
 			email,
-			password,
+			password: hashedPassword,
 			phoneNumber,
 			role,
 		};
+
 		if (dateOfBirth) userData.dateOfBirth = dateOfBirth;
 
-		// Handle team assignment - support both team name and team ID
+		// Handle team assignment (by ID or name)
 		if (team) {
-			// Check if team is a valid ObjectId (team ID)
-			const mongoose = require("mongoose");
 			if (mongoose.Types.ObjectId.isValid(team)) {
-				// It's a valid ObjectId, use it directly
 				userData.team = team;
 			} else {
-				// It's a team name, find the team by name
 				const teamDoc = await Team.findOne({ name: team });
 				if (teamDoc) {
 					userData.team = teamDoc._id;
@@ -53,45 +69,83 @@ exports.register = async (req, res) => {
 			}
 		}
 
-		userData.profilePicture =
-			req.body.profilePicture ||
-			"https://res.cloudinary.com/your-cloud-name/image/upload/v1/profiles/default-avatar.png";
+		// Handle profile picture upload URL from multer + cloudinary
+		if (req.file && req.file.path) {
+			userData.profilePicture = req.file.path; // Cloudinary URL from multer-storage-cloudinary
+		} else {
+			// Default avatar if no file uploaded - use UI Avatars service
+			const userName = `${firstName} ${lastName}`.trim();
+			userData.profilePicture = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+				userName
+			)}&background=random&color=fff&size=200`;
+		}
 
+		// Create user
 		const newUser = await User.create(userData);
+
+		// Send response (exclude password)
+		const userResponse = newUser.toObject();
+		delete userResponse.password;
 
 		res.status(201).json({
 			status: "success",
-			message: "User registered (no security)",
+			message: "User registered successfully",
 			data: {
-				user: newUser,
+				user: userResponse,
 			},
 			token: generateTokenPair(newUser._id),
 		});
 	} catch (err) {
+		console.log(err);
 		res.status(500).json({
 			status: "fail",
 			message: "Server error during registration",
 		});
-		console.log(err);
 	}
 };
 
 exports.login = async (req, res) => {
 	try {
 		const { email, password } = req.body;
-		const user = await User.findOne({ email, password });
+
+		// Find user by email
+		const user = await User.findOne({ email }).select("+password");
+
 		if (!user) {
 			return res.status(401).json({
 				status: "fail",
-				message: "Invalid email or password (no security)",
+				message: "Invalid email or password",
 			});
 		}
+
+		// Check if user is active
+		if (!user.isActive) {
+			return res.status(401).json({
+				status: "fail",
+				message: "Account is deactivated",
+			});
+		}
+
+		// Verify password
+		const isPasswordCorrect = await bcrypt.compare(password, user.password);
+		if (!isPasswordCorrect) {
+			return res.status(401).json({
+				status: "fail",
+				message: "Invalid email or password",
+			});
+		}
+
+		// Send response (exclude password)
+		const userResponse = user.toObject();
+		delete userResponse.password;
+
 		res.status(200).json({
 			status: "success",
-			data: { user },
+			data: { user: userResponse },
 			token: generateTokenPair(user._id),
 		});
 	} catch (err) {
+		console.error("Login error:", err);
 		res.status(500).json({
 			status: "fail",
 			message: "Server error during login",
@@ -197,28 +251,8 @@ exports.updateProfile = async (req, res) => {
 		if (dateOfBirth) updateData.dateOfBirth = dateOfBirth;
 
 		// Handle profile picture upload if provided
-		if (req.file) {
-			const uploadPromise = new Promise((resolve, reject) => {
-				const uploadStream = cloudinary.uploader.upload_stream(
-					{
-						folder: "profiles",
-						resource_type: "image",
-						transformation: [{ width: 300, height: 300, crop: "fill" }],
-					},
-					(error, result) => {
-						if (error) {
-							reject(error);
-						} else {
-							resolve(result);
-						}
-					}
-				);
-
-				uploadStream.end(req.file.buffer);
-			});
-
-			const cloudinaryResult = await uploadPromise;
-			updateData.profilePicture = cloudinaryResult.secure_url;
+		if (req.file && req.file.path) {
+			updateData.profilePicture = req.file.path; // Cloudinary URL from multer-storage-cloudinary
 		}
 
 		// Update user
