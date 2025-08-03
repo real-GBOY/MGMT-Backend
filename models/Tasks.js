@@ -52,6 +52,10 @@ const taskSchema = new mongoose.Schema(
 			{
 				fileName: String,
 				fileUrl: String,
+				uploadedBy: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: "User",
+				},
 				uploadedAt: {
 					type: Date,
 					default: Date.now,
@@ -65,6 +69,10 @@ const taskSchema = new mongoose.Schema(
 					ref: "User",
 				},
 				comment: String,
+				attachment: {
+					fileName: String,
+					fileUrl: String,
+				},
 				createdAt: {
 					type: Date,
 					default: Date.now,

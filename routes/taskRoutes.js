@@ -27,17 +27,9 @@ router.get("/my-team", authenticate, taskController.getMyTeamTasks);
 // Get my assigned tasks (individual user tasks)
 router.get("/my-tasks", authenticate, taskController.getMyTasks);
 
-// Create task for team (team leaders and vice heads only) - with form data support
+// Create task for team (team leaders and vice heads only) - supports both with and without file
 router.post(
 	"/team",
-	authenticate,
-	authorize("team_leader", "vice_head"),
-	taskController.createTeamTask
-);
-
-// Create task for team with file (team leaders and vice heads only) - with file upload
-router.post(
-	"/team/with-file",
 	authenticate,
 	authorize("team_leader", "vice_head"),
 	uploadTaskFile.single("file"),
@@ -82,15 +74,12 @@ router.delete(
 	taskController.deleteTask
 );
 
-// Add comment to task - with form data support
-router.post("/:id/comments", authenticate, taskController.addComment);
-
-// Add comment with file attachment
+// Add comment to task - supports both with and without file attachment
 router.post(
-	"/:id/comments/with-file",
+	"/:id/comments",
 	authenticate,
 	uploadCommentFile.single("file"),
-	taskController.addCommentWithFile
+	taskController.addComment
 );
 
 // Upload file to task

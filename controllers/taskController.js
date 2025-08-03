@@ -291,6 +291,17 @@ exports.createTeamTask = async (req, res) => {
 			priority: priority || "medium",
 		};
 
+		// Handle file upload if provided
+		if (req.file && req.file.path) {
+			taskData.attachments = [
+				{
+					fileName: req.file.originalname,
+					fileUrl: req.file.path,
+					uploadedBy: creatorId,
+				},
+			];
+		}
+
 		// Create task
 		const newTask = await Task.create(taskData);
 
@@ -302,7 +313,9 @@ exports.createTeamTask = async (req, res) => {
 
 		res.status(201).json({
 			status: "success",
-			message: "Task created successfully",
+			message: req.file
+				? "Task created successfully with file attachment"
+				: "Task created successfully",
 			data: {
 				task: populatedTask,
 			},
@@ -668,10 +681,21 @@ exports.addComment = async (req, res) => {
 			});
 		}
 
-		task.comments.push({
+		// Create comment object
+		const commentObj = {
 			user: userId,
 			comment: comment.trim(),
-		});
+		};
+
+		// Add file attachment if uploaded
+		if (req.file && req.file.path) {
+			commentObj.attachment = {
+				fileName: req.file.originalname,
+				fileUrl: req.file.path,
+			};
+		}
+
+		task.comments.push(commentObj);
 
 		await task.save();
 
@@ -683,7 +707,9 @@ exports.addComment = async (req, res) => {
 
 		res.status(200).json({
 			status: "success",
-			message: "Comment added successfully",
+			message: req.file
+				? "Comment with attachment added successfully"
+				: "Comment added successfully",
 			data: {
 				task: updatedTask,
 			},
@@ -771,91 +797,6 @@ exports.uploadTaskFile = async (req, res) => {
 		res.status(500).json({
 			status: "fail",
 			message: "Server error while uploading file",
-		});
-	}
-};
-
-// Add comment with file attachment
-exports.addCommentWithFile = async (req, res) => {
-	try {
-		// Handle form data instead of JSON
-		const { comment } = req.body;
-		const taskId = req.params.id;
-		const userId = req.user._id;
-
-		if (!comment) {
-			return res.status(400).json({
-				status: "fail",
-				message: "Comment is required",
-			});
-		}
-
-		const task = await Task.findById(taskId);
-		if (!task) {
-			return res.status(404).json({
-				status: "fail",
-				message: "Task not found",
-			});
-		}
-
-		// Check if user is assigned to this task or is team leader/vice head
-		const user = await User.findById(userId);
-		if (!user) {
-			return res.status(401).json({
-				status: "fail",
-				message: "Unauthorized",
-			});
-		}
-
-		// Allow comments if user is assigned to task, created the task, or is team leadership
-		const canComment =
-			task.assignedTo.equals(userId) ||
-			task.createdBy.equals(userId) ||
-			["team_leader", "vice_head", "admin"].includes(user.role);
-
-		if (!canComment) {
-			return res.status(403).json({
-				status: "fail",
-				message:
-					"You can only comment on tasks assigned to you or tasks you created",
-			});
-		}
-
-		// Create comment object
-		const commentObj = {
-			user: userId,
-			comment: comment.trim(),
-		};
-
-		// Add file attachment if uploaded
-		if (req.file) {
-			commentObj.attachment = {
-				fileName: req.file.originalname,
-				fileUrl: req.file.path,
-			};
-		}
-
-		task.comments.push(commentObj);
-		await task.save();
-
-		const updatedTask = await Task.findById(taskId)
-			.populate("assignedTo", "firstName lastName email team")
-			.populate("createdBy", "firstName lastName email")
-			.populate("assignedTo.team", "name")
-			.populate("comments.user", "firstName lastName");
-
-		res.status(200).json({
-			status: "success",
-			message: "Comment with attachment added successfully",
-			data: {
-				task: updatedTask,
-			},
-		});
-	} catch (err) {
-		console.error("Add comment with file error:", err);
-		res.status(500).json({
-			status: "fail",
-			message: "Server error while adding comment with file",
 		});
 	}
 };
