@@ -645,3 +645,98 @@ exports.getTeamLeadership = async (req, res) => {
 		});
 	}
 };
+
+// Get my team members (for team leaders and vice heads)
+exports.getMyTeamMembers = async (req, res) => {
+	try {
+		const userId = req.user._id;
+		const userRole = req.user.role;
+
+		// Check if user is a team leader or vice head
+		if (!["team_leader", "vice_head"].includes(userRole)) {
+			return res.status(403).json({
+				status: "fail",
+				message:
+					"Access denied. Only team leaders and vice heads can view team members",
+			});
+		}
+
+		// Get user's team
+		const user = await User.findById(userId).populate(
+			"team",
+			"name description teamLeader teamViceHead"
+		);
+
+		if (!user.team) {
+			return res.status(404).json({
+				status: "fail",
+				message: "You are not assigned to any team",
+			});
+		}
+
+		// Verify that the user is actually the team leader or vice head of this team
+		const team = await Team.findById(user.team._id);
+
+		if (!team) {
+			return res.status(404).json({
+				status: "fail",
+				message: "Team not found",
+			});
+		}
+
+		// Check if user is the team leader
+		const isTeamLeader =
+			team.teamLeader && team.teamLeader.toString() === userId.toString();
+
+		// Check if user is a vice head
+		const isViceHead =
+			team.teamViceHead &&
+			team.teamViceHead.some((vh) => vh.toString() === userId.toString());
+
+		if (!isTeamLeader && !isViceHead) {
+			return res.status(403).json({
+				status: "fail",
+				message:
+					"Access denied. You are not the team leader or vice head of this team",
+			});
+		}
+
+		// Get all team members
+		const members = await User.find({ team: user.team._id })
+			.select(
+				"firstName lastName email role profilePicture phoneNumber dateOfBirth isActive createdAt"
+			)
+			.sort({ firstName: 1, lastName: 1 });
+
+		// Get team leadership details
+		const teamWithLeadership = await Team.findById(user.team._id)
+			.populate("teamLeader", "firstName lastName email role profilePicture")
+			.populate("teamViceHead", "firstName lastName email role profilePicture");
+
+		res.status(200).json({
+			status: "success",
+			data: {
+				team: {
+					id: teamWithLeadership._id,
+					name: teamWithLeadership.name,
+					description: teamWithLeadership.description,
+					teamLeader: teamWithLeadership.teamLeader,
+					teamViceHead: teamWithLeadership.teamViceHead,
+				},
+				members: {
+					total: members.length,
+					list: members,
+				},
+				userRole: userRole,
+				isTeamLeader: isTeamLeader,
+				isViceHead: isViceHead,
+			},
+		});
+	} catch (err) {
+		console.error("Get my team members error:", err);
+		res.status(500).json({
+			status: "fail",
+			message: "Server error while fetching team members",
+		});
+	}
+};

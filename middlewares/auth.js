@@ -150,19 +150,19 @@ const teamLeaderOrAdmin = (req, res, next) => {
 		});
 	}
 
-	if (!["teamHead", "teamViceHead", "admin"].includes(req.user.role)) {
+	if (!["team_leader", "vice_head", "admin"].includes(req.user.role)) {
 		return res.status(403).json({
 			status: "fail",
 			message:
-				"Access denied. Team head, vice head, or admin privileges required",
+				"Access denied. Team leader, vice head, or admin privileges required",
 		});
 	}
 
 	next();
 };
 
-// Team head, vice head, or admin middleware
-const teamHeadViceHeadOrAdmin = (req, res, next) => {
+// Team leader, vice head, or admin middleware
+const teamLeaderViceHeadOrAdmin = (req, res, next) => {
 	if (!req.user) {
 		return res.status(401).json({
 			status: "fail",
@@ -170,11 +170,11 @@ const teamHeadViceHeadOrAdmin = (req, res, next) => {
 		});
 	}
 
-	if (!["teamHead", "teamViceHead", "admin"].includes(req.user.role)) {
+	if (!["team_leader", "vice_head", "admin"].includes(req.user.role)) {
 		return res.status(403).json({
 			status: "fail",
 			message:
-				"Access denied. Team head, vice head, or admin privileges required",
+				"Access denied. Team leader, vice head, or admin privileges required",
 		});
 	}
 
@@ -264,7 +264,7 @@ const resourceOwnerOrTeamLeaderOrAdmin = (req, res, next) => {
 	}
 
 	// Team head or vice head can access team resources
-	if (["teamHead", "teamViceHead"].includes(req.user.role)) {
+	if (["team_leader", "vice_head"].includes(req.user.role)) {
 		return next();
 	}
 
@@ -286,7 +286,7 @@ const resourceOwnerOrTeamLeaderOrAdmin = (req, res, next) => {
 	});
 };
 
-// Team leadership middleware (team head or vice head)
+// Team leadership middleware (team leader or vice head)
 const teamLeadership = (req, res, next) => {
 	if (!req.user) {
 		return res.status(401).json({
@@ -295,7 +295,7 @@ const teamLeadership = (req, res, next) => {
 		});
 	}
 
-	if (!["teamHead", "teamViceHead"].includes(req.user.role)) {
+	if (!["team_leader", "vice_head"].includes(req.user.role)) {
 		return res.status(403).json({
 			status: "fail",
 			message: "Access denied. Team leadership privileges required",
@@ -314,7 +314,7 @@ const teamLeadershipOrAdmin = (req, res, next) => {
 		});
 	}
 
-	if (!["teamHead", "teamViceHead", "admin"].includes(req.user.role)) {
+	if (!["team_leader", "vice_head", "admin"].includes(req.user.role)) {
 		return res.status(403).json({
 			status: "fail",
 			message: "Access denied. Team leadership or admin privileges required",
@@ -338,8 +338,8 @@ const memberAccess = (req, res, next) => {
 		return next();
 	}
 
-	// Team heads and vice heads can access team resources
-	if (["teamHead", "teamViceHead"].includes(req.user.role)) {
+	// Team leaders and vice heads can access team resources
+	if (["team_leader", "vice_head"].includes(req.user.role)) {
 		return next();
 	}
 
@@ -444,7 +444,7 @@ module.exports = {
 	authorize,
 	adminOnly,
 	teamLeaderOrAdmin,
-	teamHeadViceHeadOrAdmin,
+	teamLeaderViceHeadOrAdmin,
 	teamLeadership,
 	teamLeadershipOrAdmin,
 	memberAccess,

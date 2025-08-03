@@ -2,6 +2,7 @@
 
 const express = require("express");
 const teamController = require("../controllers/teamController");
+const { authenticate, authorize } = require("../middlewares/auth");
 
 const router = express.Router();
 
@@ -13,6 +14,14 @@ router.post("/", teamController.createTeam);
 
 // Get team statistics
 router.get("/stats", teamController.getTeamStats);
+
+// Get my team members (for team leaders and vice heads only) - MUST BE BEFORE PARAMETERIZED ROUTES
+router.get(
+	"/my-team/members",
+	authenticate,
+	authorize("team_leader", "vice_head"),
+	teamController.getMyTeamMembers
+);
 
 // Check if team name exists
 router.get("/check/:name", teamController.checkTeamName);

@@ -47,7 +47,7 @@ const taskSchema = new mongoose.Schema(
 		},
 		// Team will be automatically determined from assignedTo user's team
 		// No need to store team separately as it can be populated from assignedTo
-	
+
 		attachments: [
 			{
 				fileName: String,
